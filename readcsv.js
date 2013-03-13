@@ -1,21 +1,21 @@
 var fs = require('fs');
- 
-function readInFile(pathname) 
-{
- 
-	function processFile(err, data) 
-	{
+var mongo = require('mongodb');
 
-		var array = data.toString().split("\n");
-					
+function readInFile(pathname)
+{
+
+	function processFile(err, myData)
+	{
+		var array = myData.toString().split("\n");
+
 		var header;
- 
+
 		var inSection = false;
 		var gotHeader = false;
 		var objArr = [];
 		var lineNo = 0;
 		var line = "";
- 
+
 		for(i in array) {
 			var s = array[i];
             if (s.indexOf("[wr_ende]")>=0)
@@ -28,19 +28,18 @@ function readInFile(pathname)
 				{
 					line = s.split(";");
 					lineNo++;
-                    var myData = {};
+					myData = {};
 					for (var i = 0; i < line.length; i++)
 					{
-						
 						myData[header[i]] = line[i];
 					}
-					console.log("Obj: " + myData.TIMESTAMP)
+					console.log("Obj: " + myData.TIMESTAMP);
 					objArr.push(myData);
 				}
 				if (s.indexOf("INTERVAL")>=0)
 				{
 					header = s.split(";");
-					console.log("header: " + header)
+					console.log("header: " + header);
 					gotHeader = true;
 				}
 			}
@@ -49,10 +48,27 @@ function readInFile(pathname)
 				inSection = true;
 			}
 		}
+		return objArr;
 	}
- 
+
 	console.log("file: " + pathname);
-	fs.readFile(pathname, 'UTF-8', processFile);
+
+	var db = new mongo.db('Sunnyboy', new mongo.Server('localhost', 27017, {}), {});
+
+	db.open(function(err, client){
+        client.createCollection("data", function(err, col) {
+        client.collection("data", function(err, col) {
+                var o = fs.readFile(pathname, 'UTF-8', processFile);
+                for (var i = 0; i < o.length; i++) {
+                    col.insert({o:i}, function() {});
+                }
+            });
+        });
+	});
+
+
+
+
 }
- 
+
 exports.start = readInFile;
